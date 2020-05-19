@@ -1,21 +1,34 @@
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
-import { notificationRouter } from './routes/';
+import * as dotenv from 'dotenv';
+import * as cors from 'cors';
+import * as webpush from 'web-push';
+import * as compression from "compression";
+import { notificationRouter } from "./routes";
+
 
 // initializing socket connection
-import connectionController from './connectionController';
+import connectionController from './controllers/connectionController';
 connectionController.init(true, 'connection.dat');
 
 // Create a new Express application.
 const app = express();
 const { PORT = 5000 } = process.env;
 
-// public folder for assets i.e (.js / .css/ images) files
-app.use(express.static('src/public'));
+dotenv.config();
+
+app.use(cors());
+app.use(compression());
 
 // Application-level middleware for common functionality( logging, parsing, and session handling).
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+webpush.setVapidDetails(
+    process.env.WEB_PUSH_CONTACT,
+    process.env.PUBLIC_VAPID_KEY,
+    process.env.PRIVATE_VAPID_KEY,
+);
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -34,7 +47,11 @@ app.use((req, res, next) => {
 });
 
 // Define Route
-app.use('/notification', notificationRouter);
+app.use('/notifications', notificationRouter);
+
+app.get('/', (req, res) => {
+    res.send('push notification service works!');
+});
 
 if (require.main === module) {
     app.listen(PORT, () => {
